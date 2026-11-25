@@ -16,7 +16,7 @@
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/help.js"></script>
 <script>
-<% <% mihomo_status(); %> %>
+<% mihomo_status(); %>
 var $j = jQuery.noConflict();
 function initial(){
 	show_banner(2);
