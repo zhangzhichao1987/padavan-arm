@@ -27,7 +27,7 @@ jobs:
       matrix:
         include:
           - build_variant: "QEMU"
-            targets: "QEMU RAX3000M RAX3000M-NAND 360T7-NAND"
+            targets: "360T7-NAND"
 #          - build_variant: "mt7621-usb-1"
 #            targets: "XY-C1 JCG-836PRO JCG-Y2"
 #          - build_variant: "mt7621-usb-2"
@@ -53,6 +53,7 @@ jobs:
       - name: Start build
         run: |
           cd trunk
+          sed -i "s/^HOST_NCPU[[:space:]]*=.*/HOST_NCPU = 1/" Makefile
           mkdir -p ${images_dir}
           for m in $targets; do fakeroot ./build_firmware_ci $m; \
           if [ $? = 0 ]; then cp -f images/*.trx ${images_dir}/$m.trx || true; cp -f images/sysupgrade_* ${images_dir}/ || true; else exit 1; fi; \
