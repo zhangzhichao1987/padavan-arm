@@ -320,20 +320,6 @@ void restart_vnt(void){
 }
 #endif
 
-#if defined(APP_MIHOMO)
-void stop_mihomo(void){
-	eval("/usr/bin/mihomo.sh","stop");
-}
-
-void start_mihomo(void){
-	eval("/usr/bin/mihomo.sh","start");
-}
-
-void restart_mihomo(void){
-	eval("/usr/bin/mihomo.sh","restart");
-}
-#endif
-
 #if defined(APP_SHADOWSOCKS)
 void stop_ss(void){
 	eval("/usr/bin/shadowsocks.sh","stop");
@@ -621,9 +607,6 @@ start_services_once(int is_ap_mode)
 #if defined(APP_VNT)
 	start_vnt();
 #endif
-#if defined(APP_MIHOMO)
-	start_mihomo();
-#endif
 	return 0;
 }
 
@@ -658,9 +641,6 @@ stop_services(int stopall)
 #endif
 #if defined(APP_VNT)
 	stop_vnt();
-#endif
-#if defined(APP_MIHOMO)
-	stop_mihomo();
 #endif
 	stop_networkmap();
 	stop_lltd();
