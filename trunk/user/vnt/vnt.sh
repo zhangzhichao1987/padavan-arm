@@ -15,7 +15,7 @@ ip: 10.26.0.20
 device_name: 360T7-Padavan
 in-ip: 192.168.1.0/24
 out-ip: 192.168.1.0/24
-cipher_model: aes_gcm
+cipher_model: aes_ecb
 finger: false
 punch_model: ipv4
 port: 0

@@ -11,7 +11,7 @@ default_conf() {
 	cat > "$CONF" <<'EOF'
 mixed-port: 7890
 socks-port: 7891
-port: 7890
+port: 7892
 allow-lan: true
 mode: rule
 log-level: info
