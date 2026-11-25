@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 /*
  * 360 T7 (MT7981B + MT7976CN, 128M SPI-NAND, 108M ubi layout)
- * Padavan-ARM port — based on mt7981b-cmcc-rax3000m-nand-ubootmod.dts
- * Hardware GPIO/LED from hanwckf immortalwrt-mt798x mt7981-360-t7-base.dtsi
+ * Padavan-ARM port, structured like upstream mt7981b-cmcc-rax3000m
  */
-
 /dts-v1/;
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include "mt7981.dtsi"
 
 / {
-	model = "360 T7 NAND version (custom U-Boot 108M layout)";
+	model = "360 T7 NAND version (108M layout)";
 	compatible = "360,t7-nand-ubootmod", "mediatek,mt7981";
 
 	aliases {
@@ -62,16 +60,6 @@
 	};
 };
 
-&gmac0 {
-	nvmem-cells = <&macaddr_factory_2a 0>;
-	nvmem-cell-names = "mac-address";
-};
-
-&gmac1 {
-	nvmem-cells = <&macaddr_factory_24 0>;
-	nvmem-cell-names = "mac-address";
-};
-
 &eth {
 	status = "okay";
 
@@ -79,6 +67,8 @@
 		compatible = "mediatek,eth-mac";
 		reg = <0>;
 		phy-mode = "2500base-x";
+		nvmem-cells = <&macaddr_factory_2a 0>;
+		nvmem-cell-names = "mac-address";
 
 		fixed-link {
 			speed = <2500>;
@@ -91,6 +81,8 @@
 		compatible = "mediatek,eth-mac";
 		reg = <1>;
 		phy-mode = "2500base-x";
+		nvmem-cells = <&macaddr_factory_24 0>;
+		nvmem-cell-names = "mac-address";
 
 		fixed-link {
 			speed = <2500>;
@@ -103,13 +95,6 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 	};
-};
-
-&hnat {
-	mtketh-wan = "eth1";
-	mtketh-lan = "eth0";
-	mtketh-max-gmac = <2>;
-	status = "okay";
 };
 
 &spi0 {
@@ -208,16 +193,16 @@
 	status = "okay";
 };
 
+&usb_phy {
+	status = "okay";
+};
+
 &watchdog {
 	status = "okay";
 };
 
 &wifi {
 	mediatek,mtd-eeprom = <&factory 0x0>;
-	status = "okay";
-};
-
-&usb_phy {
 	status = "okay";
 };
 
