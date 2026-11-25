@@ -2238,6 +2238,16 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 #else
 	int found_app_shadowsocks = 0;
 #endif
+#if defined(APP_VNT)
+	int found_app_vnt = 1;
+#else
+	int found_app_vnt = 0;
+#endif
+#if defined(APP_MIHOMO)
+	int found_app_mihomo = 1;
+#else
+	int found_app_mihomo = 0;
+#endif
 #if defined(APP_DNSFORWARDER)
 	int found_app_dnsforwarder = 1;
 #else
@@ -2416,7 +2426,9 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 		"function found_app_dnsforwarder() { return %d;}\n"
 		"function found_app_shadowsocks() { return %d;}\n"
 		"function found_app_xupnpd() { return %d;}\n"
-		"function found_app_mentohust() { return %d;}\n",
+		"function found_app_mentohust() { return %d;}\n"
+		"function found_app_vnt() { return %d;}\n"
+		"function found_app_mihomo() { return %d;}\n",
 		found_utl_hdparm,
 		found_app_ovpn,
 		found_app_dlna,
@@ -2437,7 +2449,9 @@ ej_firmware_caps_hook(int eid, webs_t wp, int argc, char **argv)
 		found_app_dnsforwarder,
 		found_app_shadowsocks,
 		found_app_xupnpd,
-		found_app_mentohust
+		found_app_mentohust,
+		found_app_vnt,
+		found_app_mihomo
 	);
 
 	websWrite(wp,
@@ -4065,6 +4079,202 @@ ej_available_disk_names_and_sizes(int eid, webs_t wp, int argc, char **argv)
 }
 #endif
 
+#if defined(APP_VNT) || defined(APP_MIHOMO)
+static void webs_write_escaped_ex(webs_t wp, const char *s, int br)
+{
+	while (s && *s) {
+		switch (*s) {
+		case '&': websWrite(wp, "&amp;"); break;
+		case '<': websWrite(wp, "&lt;"); break;
+		case '>': websWrite(wp, "&gt;"); break;
+		case '\n': websWrite(wp, br ? "<br>\n" : "\n"); break;
+		default: websWrite(wp, "%c", (unsigned char)*s); break;
+		}
+		s++;
+	}
+}
+
+static void webs_dump_file_escaped(webs_t wp, const char *path, int br)
+{
+	char buf[8192];
+	size_t n;
+	FILE *f = fopen(path, "r");
+	if (!f) {
+		websWrite(wp, "(no log yet)\n");
+		return;
+	}
+	while ((n = fread(buf, 1, sizeof(buf) - 1, f)) > 0) {
+		buf[n] = 0;
+		webs_write_escaped_ex(wp, buf, br);
+	}
+	fclose(f);
+}
+#endif
+
+#if defined(APP_VNT)
+static void vnt_write_default_config(void)
+{
+	FILE *f = fopen("/etc/storage/vnt/vnt.conf", "w");
+	if (!f) return;
+	fprintf(f,
+		"# VNT 1.2.16 client config for 360T7 Padavan\n"
+		"# 修改后点“保存并应用”\n"
+		"token: 19871\n"
+		"ip: 10.26.0.20\n"
+		"device_name: 360T7-Padavan\n"
+		"in-ip: 192.168.1.0/24\n"
+		"out-ip: 192.168.1.0/24\n"
+		"cipher_model: aes_gcm\n"
+		"finger: false\n"
+		"punch_model: ipv4\n"
+		"port: 0\n"
+		"cmd: false\n"
+		"no_proxy: false\n");
+	fclose(f);
+}
+
+static int vnt_config_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	eval("/bin/sh", "-c", "mkdir -p /etc/storage/vnt");
+	{
+		FILE *f = fopen("/etc/storage/vnt/vnt.conf", "r");
+		if (f) fclose(f); else vnt_write_default_config();
+		webs_dump_file_escaped(wp, "/etc/storage/vnt/vnt.conf", 0);
+	}
+	return 0;
+}
+
+static int vnt_action_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	char *act = websGetVar(wp, "connect_action", "");
+	char *cfg = websGetVar(wp, "config_text", "");
+
+	eval("/bin/sh", "-c", "mkdir -p /etc/storage/vnt");
+	if ((!strcmp(act, "Save") || !strcmp(act, "SaveApply")) && cfg && *cfg) {
+		FILE *f = fopen("/etc/storage/vnt/vnt.conf", "w");
+		if (f) {
+			fprintf(f, "%s", cfg);
+			fclose(f);
+		}
+	}
+	if (!strcmp(act, "SaveApply") || !strcmp(act, "Start") || !strcmp(act, "Restart") || !strcmp(act, "Info")) {
+		if (!strcmp(act, "Info"))
+			eval("/bin/sh", "-c", "/usr/bin/vnt.sh info >/dev/null 2>&1 &");
+		else
+			eval("/bin/sh", "-c", "/usr/bin/vnt.sh restart >/dev/null 2>&1 &");
+	} else if (!strcmp(act, "Stop")) {
+		eval("/bin/sh", "-c", "/usr/bin/vnt.sh stop >/dev/null 2>&1 &");
+	}
+	websWrite(wp, "<script>restart_needed_time(%d);</script>\n", 2);
+	return 0;
+}
+
+static int vnt_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	websWrite(wp, "function vnt_status() { return %d;}\n", pids("vnt-cli"));
+	return 0;
+}
+
+static int vnt_log_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	webs_dump_file_escaped(wp, "/tmp/vnt-cli.log", 1);
+	return 0;
+}
+
+static int vnt_info_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	webs_dump_file_escaped(wp, "/tmp/vnt-info.log", 1);
+	return 0;
+}
+#endif
+
+#if defined(APP_MIHOMO)
+static void mihomo_write_default_config(void)
+{
+	FILE *f = fopen("/etc/storage/mihomo/config.yaml", "w");
+	if (!f) return;
+	fprintf(f,
+		"# Mihomo / Meta 核心简化配置\n"
+		"# 可整段替换为你的订阅配置\n"
+		"mixed-port: 7890\n"
+		"socks-port: 7891\n"
+		"port: 7890\n"
+		"allow-lan: true\n"
+		"mode: rule\n"
+		"log-level: info\n"
+		"ipv6: true\n"
+		"external-controller: 127.0.0.1:9090\n"
+		"dns:\n"
+		"  enable: true\n"
+		"  listen: 0.0.0.0:1053\n"
+		"  enhanced-mode: fake-ip\n"
+		"  fake-ip-range: 198.18.0.1/16\n"
+		"  nameserver:\n"
+		"    - 223.5.5.5\n"
+		"    - 119.29.29.29\n"
+		"  fallback:\n"
+		"    - https://223.5.5.5/dns-query\n"
+		"    - https://doh.pub/dns-query\n"
+		"proxies: []\n"
+		"proxy-groups:\n"
+		"  - name: PROXY\n"
+		"    type: select\n"
+		"    proxies:\n"
+		"      - DIRECT\n"
+		"rules:\n"
+		"  - GEOIP,private,DIRECT,no-resolve\n"
+		"  - GEOSITE,cn,DIRECT\n"
+		"  - GEOIP,cn,DIRECT\n"
+		"  - MATCH,PROXY\n");
+	fclose(f);
+}
+
+static int mihomo_config_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	eval("/bin/sh", "-c", "mkdir -p /etc/storage/mihomo");
+	{
+		FILE *f = fopen("/etc/storage/mihomo/config.yaml", "r");
+		if (f) fclose(f); else mihomo_write_default_config();
+		webs_dump_file_escaped(wp, "/etc/storage/mihomo/config.yaml", 0);
+	}
+	return 0;
+}
+
+static int mihomo_action_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	char *act = websGetVar(wp, "connect_action", "");
+	char *cfg = websGetVar(wp, "config_text", "");
+
+	eval("/bin/sh", "-c", "mkdir -p /etc/storage/mihomo");
+	if ((!strcmp(act, "Save") || !strcmp(act, "SaveApply")) && cfg && *cfg) {
+		FILE *f = fopen("/etc/storage/mihomo/config.yaml", "w");
+		if (f) {
+			fprintf(f, "%s", cfg);
+			fclose(f);
+		}
+	}
+	if (!strcmp(act, "SaveApply") || !strcmp(act, "Start") || !strcmp(act, "Restart")) {
+		eval("/bin/sh", "-c", "/usr/bin/mihomo.sh restart >/dev/null 2>&1 &");
+	} else if (!strcmp(act, "Stop")) {
+		eval("/bin/sh", "-c", "/usr/bin/mihomo.sh stop >/dev/null 2>&1 &");
+	}
+	websWrite(wp, "<script>restart_needed_time(%d);</script>\n", 2);
+	return 0;
+}
+
+static int mihomo_status_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	websWrite(wp, "function mihomo_status() { return %d;}\n", pids("mihomo"));
+	return 0;
+}
+
+static int mihomo_log_hook(int eid, webs_t wp, int argc, char **argv)
+{
+	webs_dump_file_escaped(wp, "/tmp/mihomo.log", 1);
+	return 0;
+}
+#endif
+
 struct ej_handler ej_handlers[] =
 {
 	{ "nvram_get_x", ej_nvram_get_x},
@@ -4155,6 +4365,19 @@ struct ej_handler ej_handlers[] =
 #endif
 #if defined (APP_DNSFORWARDER)
 	{ "dnsforwarder_status", dnsforwarder_status_hook},
+#endif
+#if defined(APP_VNT)
+	{ "vnt_config", vnt_config_hook},
+	{ "vnt_action", vnt_action_hook},
+	{ "vnt_status", vnt_status_hook},
+	{ "vnt_log", vnt_log_hook},
+	{ "vnt_info", vnt_info_hook},
+#endif
+#if defined(APP_MIHOMO)
+	{ "mihomo_config", mihomo_config_hook},
+	{ "mihomo_action", mihomo_action_hook},
+	{ "mihomo_status", mihomo_status_hook},
+	{ "mihomo_log", mihomo_log_hook},
 #endif
 	{ "openssl_util_hook", openssl_util_hook},
 	{ "openvpn_srv_cert_hook", openvpn_srv_cert_hook},
