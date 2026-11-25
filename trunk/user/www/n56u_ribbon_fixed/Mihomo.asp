@@ -20,7 +20,7 @@
 var $j = jQuery.noConflict();
 function initial(){
 	show_banner(2);
-	show_menu(5, 16, 1);
+	show_menu(5, 15, 1);
 	show_footer();
 	var st = mihomo_status();
 	$("svc_status").innerHTML = st ? '<span class="label label-success">运行中</span>' : '<span class="label label-warning">已停止</span>';
